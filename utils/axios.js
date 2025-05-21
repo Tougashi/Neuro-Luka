@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://requirement-downtown-poet-streets.trycloudflare.com/';
+const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://homepage-region-station-constitutes.trycloudflare.com//';
 
 const instance = axios.create({
     baseURL,
@@ -20,7 +20,7 @@ const instance = axios.create({
 instance.interceptors.request.use(
     async (config) => {
         // Skip CSRF token for non-Laravel API endpoints
-        if (config.url.includes('https://heroes-daily-tie-begun.trycloudflare.com/')) {
+        if (config.url.includes('https://logged-dennis-sept-breach.trycloudflare.com//')) {
             return config;
         }
 

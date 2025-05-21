@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
 
 // Configure axios defaults
-axios.defaults.baseURL = 'https://requirement-downtown-poet-streets.trycloudflare.com/';
+axios.defaults.baseURL = 'https://homepage-region-station-constitutes.trycloudflare.com//';
 axios.defaults.withCredentials = true;
 axios.defaults.headers.common['Accept'] = 'application/json';
 axios.defaults.headers.post['Content-Type'] = 'application/json';
