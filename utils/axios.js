@@ -10,34 +10,41 @@ const instance = axios.create({
         'Accept': 'application/json'
     },
     withCredentials: true,
-    timeout: 10000
+    timeout: 30000, // Increased timeout to 30 seconds
+    validateStatus: function (status) {
+        return status >= 200 && status < 500; // Accept all status codes less than 500
+    }
 });
 
 // Add request interceptor for CSRF token
 instance.interceptors.request.use(
     async (config) => {
-        // Don't add CSRF token for external APIs
-        if (!config.url.includes('https://heroes-daily-tie-begun.trycloudflare.com/')) {
-            try {
-                // Use the same instance for CSRF token request
-                await instance.get('/sanctum/csrf-cookie');
-                
-                // Get the XSRF-TOKEN cookie
+        // Skip CSRF token for non-Laravel API endpoints
+        if (config.url.includes('https://heroes-daily-tie-begun.trycloudflare.com/')) {
+            return config;
+        }
+
+        try {
+            // Use a separate axios instance for CSRF token to avoid circular dependencies
+            const csrfResponse = await axios.get(`${baseURL}sanctum/csrf-cookie`, {
+                withCredentials: true,
+                timeout: 5000 // Shorter timeout for CSRF request
+            });
+
+            if (csrfResponse.status === 204) {
                 const cookies = document.cookie.split(';');
                 const xsrfToken = cookies.find(cookie => cookie.trim().startsWith('XSRF-TOKEN='));
                 
                 if (xsrfToken) {
                     const token = decodeURIComponent(xsrfToken.split('=')[1]);
                     config.headers['X-XSRF-TOKEN'] = token;
-                } else {
-                    console.warn('XSRF-TOKEN cookie not found');
                 }
-            } catch (error) {
-                console.error('Error getting CSRF token:', error);
-                // Don't throw the error, just log it and continue
-                // This allows the request to proceed even if CSRF token fetch fails
             }
+        } catch (error) {
+            console.warn('CSRF token fetch failed:', error.message);
+            // Continue with the request even if CSRF token fetch fails
         }
+
         return config;
     },
     (error) => {
@@ -50,7 +57,6 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
     response => response,
     error => {
-        // Create a more detailed error object
         const errorDetails = {
             message: error.message,
             status: error.response?.status,
@@ -62,30 +68,43 @@ instance.interceptors.response.use(
             }
         };
 
+        if (error.code === 'ECONNABORTED') {
+            console.error('Request timeout:', errorDetails);
+            return Promise.reject({
+                ...error,
+                message: 'Request timeout. Please try again.',
+                errorDetails
+            });
+        }
+
         if (error.response) {
-            // The request was made and the server responded with a status code
-            // that falls out of the range of 2xx
             console.error('API Error Response:', errorDetails);
             
-            // Handle specific error cases
             if (error.response.status === 419) {
-                console.error('CSRF token mismatch. Please try again.');
-            } else if (error.response.status === 500) {
-                console.error('Server error. Please try again later.');
+                return Promise.reject({
+                    ...error,
+                    message: 'Session expired. Please refresh the page and try again.',
+                    errorDetails
+                });
+            }
+            
+            if (error.response.status === 500) {
+                return Promise.reject({
+                    ...error,
+                    message: 'Server error. Please try again later.',
+                    errorDetails
+                });
             }
         } else if (error.request) {
-            // The request was made but no response was received
             console.error('API Error Request:', {
                 message: 'No response received from server',
                 request: error.request,
                 config: errorDetails.config
             });
         } else {
-            // Something happened in setting up the request that triggered an Error
             console.error('API Error Setup:', errorDetails);
         }
 
-        // Return a standardized error object
         return Promise.reject({
             ...error,
             errorDetails
