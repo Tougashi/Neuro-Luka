@@ -113,7 +113,7 @@ export default function WoundAnalysis() {
 
       // Create a separate axios instance for FastAPI
       const fastApiClient = axios.create({
-        baseURL: 'http://localhost:8090',
+        baseURL: 'https://heroes-daily-tie-begun.trycloudflare.com/',
         headers: {
           'Content-Type': 'multipart/form-data',
           'Accept': 'application/json'

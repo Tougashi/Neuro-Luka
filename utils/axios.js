@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+    baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://requirement-downtown-poet-streets.trycloudflare.com/',
     headers: {
         'X-Requested-With': 'XMLHttpRequest',
         'Content-Type': 'application/json',
@@ -15,10 +15,10 @@ const instance = axios.create({
 instance.interceptors.request.use(
     async (config) => {
         // Don't add CSRF token for external APIs
-        if (!config.url.includes('localhost:8090')) {
+        if (!config.url.includes('https://heroes-daily-tie-begun.trycloudflare.com/')) {
             try {
                 await axios.get('/sanctum/csrf-cookie', {
-                    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
+                    baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://requirement-downtown-poet-streets.trycloudflare.com/',
                     withCredentials: true
                 });
                 
