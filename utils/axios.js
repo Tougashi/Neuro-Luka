@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://requirement-downtown-poet-streets.trycloudflare.com/';
+
 const instance = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://requirement-downtown-poet-streets.trycloudflare.com/',
+    baseURL,
     headers: {
         'X-Requested-With': 'XMLHttpRequest',
         'Content-Type': 'application/json',
@@ -17,10 +19,8 @@ instance.interceptors.request.use(
         // Don't add CSRF token for external APIs
         if (!config.url.includes('https://heroes-daily-tie-begun.trycloudflare.com/')) {
             try {
-                await axios.get('/sanctum/csrf-cookie', {
-                    baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://requirement-downtown-poet-streets.trycloudflare.com/',
-                    withCredentials: true
-                });
+                // Use the same instance for CSRF token request
+                await instance.get('/sanctum/csrf-cookie');
                 
                 // Get the XSRF-TOKEN cookie
                 const cookies = document.cookie.split(';');
@@ -29,15 +29,19 @@ instance.interceptors.request.use(
                 if (xsrfToken) {
                     const token = decodeURIComponent(xsrfToken.split('=')[1]);
                     config.headers['X-XSRF-TOKEN'] = token;
+                } else {
+                    console.warn('XSRF-TOKEN cookie not found');
                 }
             } catch (error) {
-                console.error('Error getting CSRF token:', error.message);
+                console.error('Error getting CSRF token:', error);
+                // Don't throw the error, just log it and continue
+                // This allows the request to proceed even if CSRF token fetch fails
             }
         }
         return config;
     },
     (error) => {
-        console.error('Request interceptor error:', error.message);
+        console.error('Request interceptor error:', error);
         return Promise.reject(error);
     }
 );
@@ -62,6 +66,13 @@ instance.interceptors.response.use(
             // The request was made and the server responded with a status code
             // that falls out of the range of 2xx
             console.error('API Error Response:', errorDetails);
+            
+            // Handle specific error cases
+            if (error.response.status === 419) {
+                console.error('CSRF token mismatch. Please try again.');
+            } else if (error.response.status === 500) {
+                console.error('Server error. Please try again later.');
+            }
         } else if (error.request) {
             // The request was made but no response was received
             console.error('API Error Request:', {
